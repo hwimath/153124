@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Passage Memorization Program</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      line-height: 1.6;
+    }
+    .hidden { display: none; }
+    .blank-input {
+      width: 100px;
+      padding: 2px;
+      font-size: 1em;
+    }
+    .correct { background-color: #c8e6c9; } /* 정답 시 연두색 */
+    .incorrect { background-color: #ffcdd2; } /* 오답 시 연분홍색 */
+    .button {
+      padding: 10px 20px;
+      margin: 5px;
+      cursor: pointer;
+      font-size: 1em;
+    }
+    .sentence-container {
+      margin-bottom: 20px;
+      font-size: 1.1em;
+    }
+    #translation-container {
+      font-size: 0.95em;
+      color: #555;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Passage Memorization Program</h1>
+  <!-- 난이도 선택 화면 -->
+  <div id="selection-screen">
+    <p>난이도 선택 (숨길 단어 비율):</p>
+    <button class="button" onclick="startGame(0)">0%</button>
+    <button class="button" onclick="startGame(10)">10%</button>
+    <button class="button" onclick="startGame(30)">30%</button>
+    <button class="button" onclick="startGame(50)">50%</button>
+    <button class="button" onclick="startGame(80)">80%</button>
+    <button class="button" onclick="startGame(100)">100%</button>
+  </div>
+  
+  <!-- 문장 표시 및 확인 화면 -->
+  <div id="game-screen" class="hidden">
+    <div id="sentence-container" class="sentence-container"></div>
+    <div id="translation-container"></div>
+    <button class="button" id="check-button" onclick="checkAnswer()">Check</button>
+    <button class="button hidden" id="next-button" onclick="nextSentence()">Next Sentence</button>
+  </div>
+  
+  <!-- 결과 화면 -->
+  <div id="result-screen" class="hidden">
+    <h2>Final Score</h2>
+    <p id="score-display"></p>
+    <button class="button" onclick="location.reload()">Restart</button>
+  </div>
+  
+  <script>
+    // 전체 지문을 문장별로 객체 배열로 저장 (text: 영어 문장, translation: 한국어 해석)
+    var sentences = [
+      { text: "Science and the Future: A Journey of Discovery", translation: "과학과 미래: 발견의 여정" },
+      { text: "Science has always been an important part of our lives.", translation: "과학은 항상 우리의 삶에서 중요한 부분이었습니다." },
+      { text: "It helps us understand the world around us and improves our daily lives.", translation: "과학은 우리 주변의 세계를 이해하는 데 도움을 주며 우리의 일상을 향상시킵니다." },
+      { text: "Today, many people believe that science will play an even bigger role in the future.", translation: "오늘날, 많은 사람들은 과학이 미래에 훨씬 더 큰 역할을 할 것이라고 믿습니다." },
+      { text: "In this passage, we will explore some exciting ideas about science and the future.", translation: "이 글에서는 과학과 미래에 관한 흥미로운 아이디어들을 탐구할 것입니다." },
+      { text: "We will look at new technologies, space exploration, renewable energy, medicine, and the role of education in shaping tomorrow.", translation: "우리는 새로운 기술, 우주 탐사, 재생 에너지, 의학, 그리고 내일을 형성하는 교육의 역할을 살펴볼 것입니다." },
+      { text: "One of the most exciting areas of science today is technology.", translation: "오늘날 과학에서 가장 흥미로운 분야 중 하나는 기술입니다." },
+      { text: "In the past, inventions like the telephone and the computer changed the way people lived.", translation: "과거에 전화와 컴퓨터와 같은 발명품들이 사람들의 생활 방식을 바꾸었습니다." },
+      { text: "Now, we see new inventions such as smartphones, smart homes, and the internet of things.", translation: "이제 우리는 스마트폰, 스마트 홈, 그리고 사물인터넷과 같은 새로운 발명품들을 보고 있습니다." },
+      { text: "These inventions help us communicate, work, and study.", translation: "이러한 발명품들은 우리가 소통하고, 일하며, 공부하는 데 도움을 줍니다." },
+      { text: "In the near future, technology will become even more important.", translation: "가까운 미래에 기술은 훨씬 더 중요해질 것입니다." },
+      { text: "Many experts believe that artificial intelligence (AI) and robotics will change many jobs.", translation: "많은 전문가들은 인공지능(AI)과 로봇공학이 많은 일자리를 바꿀 것이라고 믿습니다." },
+      { text: "Robots are already used in factories and hospitals.", translation: "로봇은 이미 공장과 병원에서 사용되고 있습니다." },
+      { text: "Soon, they may help with household tasks, care for the elderly, or even drive cars.", translation: "곧 로봇은 가사 일을 돕거나, 노인을 돌보거나, 심지어 자동차를 운전할 수도 있습니다." },
+      { text: "These advances can make life easier, but they also bring challenges.", translation: "이러한 발전은 삶을 더 편하게 만들 수 있지만, 동시에 도전 과제도 가져옵니다." },
+      { text: "For example, people must learn new skills to work with advanced machines.", translation: "예를 들어, 사람들은 첨단 기계와 함께 일하기 위해 새로운 기술을 배워야 합니다." },
+      { text: "In the future, education and training will be very important to prepare for these changes.", translation: "미래에는 이러한 변화에 대비하기 위해 교육과 훈련이 매우 중요해질 것입니다." },
+      { text: "Another exciting topic is space exploration.", translation: "또 다른 흥미로운 주제는 우주 탐사입니다." },
+      { text: "For many years, scientists and engineers have looked at the stars with wonder.", translation: "오랜 세월 동안, 과학자들과 엔지니어들은 경이로움 속에 별들을 바라보아 왔습니다." },
+      { text: "In the 1960s, humans walked on the Moon, and now many countries plan to return to space.", translation: "1960년대에 인간은 달에 발을 디뎠고, 이제 많은 국가들이 다시 우주로 나아갈 계획입니다." },
+      { text: "Today, projects are underway to explore Mars, the Moon, and even distant planets.", translation: "오늘날, 화성, 달, 그리고 심지어 먼 행성을 탐사하기 위한 프로젝트들이 진행 중입니다." },
+      { text: "Space exploration helps us learn about the universe and may even lead to new discoveries that can help us on Earth.", translation: "우주 탐사는 우주에 대해 배우는 데 도움을 주며, 지구에 도움이 되는 새로운 발견으로 이어질 수도 있습니다." },
+      { text: "For instance, studying space can lead to new materials, better communication systems, and even new ways to protect our planet.", translation: "예를 들어, 우주 연구는 새로운 소재, 더 나은 통신 시스템, 그리고 지구를 보호하는 새로운 방법을 가져올 수 있습니다." },
+      { text: "In the future, humans may build space stations or colonies on other planets.", translation: "미래에는 인간이 우주 정거장이나 다른 행성에 식민지를 건설할 수도 있습니다." },
+      { text: "This idea may seem like science fiction now, but many scientists believe that it is possible if we continue to work hard and explore new ideas.", translation: "이 아이디어는 지금은 공상 과학처럼 보일 수 있지만, 많은 과학자들은 우리가 계속 열심히 일하고 새로운 아이디어를 탐구한다면 가능하다고 믿습니다." },
+      { text: "The future of energy is another important subject.", translation: "에너지의 미래도 또 다른 중요한 주제입니다." },
+      { text: "Today, many people rely on fossil fuels like oil and coal to produce energy.", translation: "오늘날, 많은 사람들은 에너지를 생산하기 위해 석유와 석탄 같은 화석 연료에 의존하고 있습니다." },
+      { text: "However, these fuels are limited and can harm the environment.", translation: "하지만 이러한 연료는 한정되어 있고 환경에 해로울 수 있습니다." },
+      { text: "As a result, scientists are working hard to find renewable sources of energy.", translation: "그 결과, 과학자들은 재생 가능한 에너지원 찾기에 열심히 노력하고 있습니다." },
+      { text: "Renewable energy, such as solar power, wind power, and hydroelectric power, comes from natural sources that will not run out.", translation: "태양열, 풍력, 수력과 같은 재생 에너지는 고갈되지 않는 자연 자원에서 나옵니다." },
+      { text: "In the future, we may see cities powered almost entirely by renewable energy.", translation: "미래에는 거의 전적으로 재생 에너지로 운영되는 도시들을 볼 수 있을 것입니다." },
+      { text: "This change can reduce pollution and slow down global warming.", translation: "이 변화는 오염을 줄이고 지구 온난화를 늦출 수 있습니다." },
+      { text: "New technologies may also improve the storage of energy.", translation: "새로운 기술들은 에너지 저장을 개선할 수도 있습니다." },
+      { text: "For example, better batteries can store energy from the sun or wind for use at night or on cloudy days.", translation: "예를 들어, 더 나은 배터리는 밤이나 흐린 날에도 태양이나 풍력으로 생성된 에너지를 저장할 수 있습니다." },
+      { text: "These improvements will help create a cleaner and more sustainable world for future generations.", translation: "이러한 개선은 미래 세대를 위해 더 깨끗하고 지속 가능한 세상을 만드는 데 도움이 될 것입니다." },
+      { text: "Medicine and biotechnology are other fields that will shape the future.", translation: "의학과 생명공학도 미래를 형성할 다른 분야들입니다." },
+      { text: "Science has already helped us fight diseases and improve health care.", translation: "과학은 이미 우리에게 질병과 싸우고 보건 의료를 개선하는 데 도움을 주었습니다." },
+      { text: "Vaccines, antibiotics, and new treatments have saved many lives.", translation: "백신, 항생제, 그리고 새로운 치료법들은 많은 생명을 구했습니다." },
+      { text: "In the future, biotechnology may offer even greater improvements.", translation: "미래에는 생명공학이 훨씬 더 큰 발전을 제공할 수도 있습니다." },
+      { text: "Researchers are studying how to use genes and cells to treat diseases that are hard to cure today.", translation: "연구자들은 오늘날 치료하기 어려운 질병들을 유전자와 세포를 사용하여 치료하는 방법을 연구하고 있습니다." },
+      { text: "For example, scientists are exploring ways to repair damaged organs or slow down aging.", translation: "예를 들어, 과학자들은 손상된 장기를 복구하거나 노화를 늦추는 방법을 탐구하고 있습니다." },
+      { text: "These discoveries could lead to longer and healthier lives for many people.", translation: "이러한 발견들은 많은 사람들에게 더 길고 건강한 삶을 가져다줄 수 있습니다." },
+      { text: "However, as we make progress in medicine, we also need to think about the ethical questions that come with these advances.", translation: "그러나 의학에서 진전을 이룰수록, 이러한 발전과 함께 따라오는 윤리적 문제에 대해서도 생각해야 합니다." },
+      { text: "It is important to use new technologies in a way that is safe and fair for everyone.", translation: "새로운 기술들을 모두에게 안전하고 공정한 방식으로 사용하는 것이 중요합니다." },
+      { text: "Education plays a very important role in the future of science.", translation: "교육은 과학의 미래에서 매우 중요한 역할을 합니다." },
+      { text: "Today’s students are the scientists, engineers, and doctors of tomorrow.", translation: "오늘날의 학생들이 내일의 과학자, 엔지니어, 그리고 의사가 될 것입니다." },
+      { text: "Learning about science in school helps young people understand the world and prepare for future challenges.", translation: "학교에서 과학을 배우는 것은 젊은이들이 세상을 이해하고 미래의 도전에 대비하는 데 도움을 줍니다." },
+      { text: "Many schools already use computers and online tools to help students learn.", translation: "많은 학교들이 이미 학생들의 학습을 돕기 위해 컴퓨터와 온라인 도구를 사용하고 있습니다." },
+      { text: "In the future, education may include virtual reality or interactive science experiments that bring lessons to life.", translation: "미래에는 교육에 가상 현실이나 수업을 생동감 있게 만드는 인터랙티브 과학 실험이 포함될 수도 있습니다." },
+      { text: "This kind of learning can make science more interesting and easier to understand.", translation: "이런 종류의 학습은 과학을 더욱 흥미롭고 이해하기 쉽게 만들 수 있습니다." },
+      { text: "It is important for teachers and schools to work together to create a strong foundation in science and technology.", translation: "교사와 학교가 함께 협력하여 과학과 기술의 탄탄한 기초를 만드는 것이 중요합니다." },
+      { text: "When students learn to think critically and solve problems, they are better prepared to make new discoveries and improve the world.", translation: "학생들이 비판적으로 사고하고 문제를 해결하는 법을 배우면, 새로운 발견을 하고 세상을 개선할 준비가 더 잘 될 것입니다." },
+      { text: "There are many challenges that come with rapid scientific progress.", translation: "빠른 과학 발전과 함께 많은 도전 과제들이 따라옵니다." },
+      { text: "Some people worry that new technologies might take away jobs or harm the environment.", translation: "어떤 사람들은 새로운 기술이 일자리를 빼앗거나 환경에 해를 끼칠까 걱정합니다." },
+      { text: "Others are concerned about privacy and security in a world filled with digital information.", translation: "또 다른 이들은 디지털 정보로 가득 찬 세상에서 개인정보와 보안에 대해 우려합니다." },
+      { text: "Even though these challenges exist, many experts believe that careful planning and responsible decision-making can help us overcome them.", translation: "이러한 도전 과제가 있음에도 불구하고, 많은 전문가들은 신중한 계획과 책임 있는 의사 결정이 이를 극복하는 데 도움이 될 것이라고 믿습니다." },
+      { text: "It is important for governments, companies, and individuals to work together to create rules and guidelines.", translation: "정부, 기업, 그리고 개인이 함께 협력하여 규칙과 지침을 만드는 것이 중요합니다." },
+      { text: "By doing so, we can ensure that new technologies are used in ways that help everyone.", translation: "이를 통해 새로운 기술들이 모두에게 도움이 되는 방식으로 사용되도록 보장할 수 있습니다." },
+      { text: "Open discussions and education about science and technology can also prepare society to face these challenges.", translation: "과학과 기술에 대한 열린 토론과 교육은 사회가 이러한 도전에 대비하도록 준비시킬 수 있습니다." },
+      { text: "When people understand the benefits and risks of new inventions, they can make better decisions for the future.", translation: "사람들이 새로운 발명품의 이점과 위험을 이해하면, 미래를 위한 더 나은 결정을 내릴 수 있습니다." },
+      { text: "In conclusion, science offers many exciting possibilities for the future.", translation: "결론적으로, 과학은 미래에 대한 많은 흥미로운 가능성을 제공합니다." },
+      { text: "Advances in technology, space exploration, renewable energy, and medicine have the power to change our lives in many positive ways.", translation: "기술, 우주 탐사, 재생 에너지, 그리고 의학의 발전은 우리의 삶을 긍정적인 방향으로 변화시킬 힘을 가지고 있습니다." },
+      { text: "At the same time, these changes bring challenges that we must face together.", translation: "동시에, 이러한 변화는 우리가 함께 맞서야 할 도전들을 가져옵니다." },
+      { text: "Education is the key to preparing for this future.", translation: "교육은 이러한 미래에 대비하는 열쇠입니다." },
+      { text: "When we learn and explore, we discover new ideas and solve old problems.", translation: "우리가 배우고 탐구할 때, 새로운 아이디어를 발견하고 오래된 문제들을 해결합니다." },
+      { text: "The future is not set in stone; it is shaped by the choices we make today.", translation: "미래는 정해진 것이 아니라, 오늘 우리가 내리는 선택들에 의해 형성됩니다." },
+      { text: "By working together and using science wisely, we can build a future that is safe, healthy, and full of opportunities for everyone.", translation: "함께 협력하고 과학을 현명하게 사용함으로써, 모두에게 안전하고 건강하며 기회가 가득한 미래를 만들 수 있습니다." },
+      { text: "The journey into the future is a journey of discovery.", translation: "미래로의 여정은 발견의 여정입니다." },
+      { text: "Every new invention, every space mission, and every breakthrough in medicine shows us that science is a tool for progress.", translation: "모든 새로운 발명, 모든 우주 임무, 그리고 모든 의학의 돌파구는 과학이 발전의 도구임을 보여줍니다." },
+      { text: "It helps us imagine a world where energy is clean, health care is advanced, and even space is within reach.", translation: "과학은 에너지가 깨끗하고, 보건 의료가 발전하며, 심지어 우주조차도 손이 닿는 세계를 상상하게 합니다." },
+      { text: "The next generation of scientists and engineers will continue this work.", translation: "다음 세대의 과학자와 엔지니어들이 이 일을 계속할 것입니다." },
+      { text: "They will learn from the past, build on current discoveries, and create innovations that we cannot even imagine today.", translation: "그들은 과거로부터 배우고, 현재의 발견을 바탕으로, 오늘날 우리가 상상할 수 없는 혁신을 만들어낼 것입니다." },
+      { text: "As you read this passage, think about the role you might play in this future.", translation: "이 글을 읽으면서, 당신이 이 미래에서 어떤 역할을 할 수 있을지 생각해 보세요." },
+      { text: "Whether you become a scientist, an engineer, or someone who uses technology in creative ways, your actions can make a difference.", translation: "당신이 과학자, 엔지니어 또는 창의적인 방식으로 기술을 사용하는 사람이 되든, 당신의 행동은 변화를 가져올 수 있습니다." },
+      { text: "The world of science is open to everyone, and each of us can contribute in our own way.", translation: "과학의 세계는 모두에게 열려 있으며, 우리 각자는 나름대로 기여할 수 있습니다." },
+      { text: "By staying curious and open-minded, we can all be a part of a future that is bright and full of promise.", translation: "호기심을 가지고 열린 마음을 유지함으로써, 우리는 모두 밝고 약속이 가득한 미래의 일부가 될 수 있습니다." },
+      { text: "In the end, science is more than just a collection of facts and formulas—it is a way of thinking and a tool for solving problems.", translation: "결국, 과학은 단순한 사실과 공식의 집합 그 이상이며, 사고 방식이자 문제 해결의 도구입니다." },
+      { text: "It teaches us to ask questions, seek answers, and never stop learning.", translation: "과학은 우리에게 질문을 하고, 답을 찾으며, 결코 학습을 멈추지 말라고 가르칩니다." },
+      { text: "With science as our guide, the future holds endless possibilities, and every step forward is a step toward a better world.", translation: "과학을 우리의 길잡이로 삼는다면, 미래는 끝없는 가능성을 품고 있으며, 앞으로 나아가는 모든 발걸음은 더 나은 세상을 향한 발걸음입니다." }
+    ];
+    
+    var currentDifficulty = 0;      // 현재 난이도 (숨길 단어 비율)
+    var currentSentenceIndex = 0;   // 현재 문장 인덱스
+    var totalScore = 0;            // 정답 개수
+    var totalBlanks = 0;           // 전체 빈칸 개수
+    var currentBlankIndices = [];   // 현재 문장에서 숨긴 단어의 인덱스 배열
+    var currentSentenceWords = [];  // 현재 문장(단어 단위 분할)
+    
+    // 게임 시작 함수
+    function startGame(difficulty) {
+      currentDifficulty = difficulty;
+      document.getElementById("selection-screen").classList.add("hidden");
+      document.getElementById("game-screen").classList.remove("hidden");
+      
+      currentSentenceIndex = 0;
+      totalScore = 0;
+      totalBlanks = 0;
+      showSentence();
+    }
+    
+    // 현재 문장을 화면에 표시하고 빈칸을 생성하는 함수
+    function showSentence() {
+      var sentenceObj = sentences[currentSentenceIndex];
+      var sentenceText = sentenceObj.text;
+      var container = document.getElementById("sentence-container");
+      container.innerHTML = "";
+      
+      // 현재 문장을 단어별로 분리
+      currentSentenceWords = sentenceText.split(" ");
+      var numWords = currentSentenceWords.length;
+      
+      // 난이도(%)에 따른 빈칸 수 계산
+      var numBlanks = Math.round(numWords * currentDifficulty / 100);
+      
+      // 0%인 경우 강제로 빈칸을 0으로 (어떤 단어도 가리지 않음)
+      // 혹은 다른 난이도에서도 numBlanks가 0인데 단어가 많은 경우 1개는 가리겠다는 로직을 쓰려면 아래 주석 제거
+      if (currentDifficulty === 0) {
+        numBlanks = 0;
+      } else {
+        if (numBlanks === 0 && numWords > 3) {
+          // 만약 완전 초반부에서 빈칸이 하나도 생성되지 않길 원치 않는다면 이 로직 사용
+          // 필요 없다면 주석 처리해도 됨
+          numBlanks = 1;
+        }
+      }
+      
+      totalBlanks += numBlanks;
+      
+      // 빈칸으로 만들 단어 인덱스 계산 (단어 수에 고르게 분포하도록)
+      currentBlankIndices = [];
+      if(numBlanks > 0) {
+        for (var i = 0; i < numBlanks; i++) {
+          var index = Math.floor((i + 1) * numWords / (numBlanks + 1));
+          currentBlankIndices.push(index);
+        }
+      }
+      
+      // 문장을 구성하며 빈칸 자리에 <input> 태그 넣기
+      var sentenceHTML = "";
+      for (var i = 0; i < numWords; i++) {
+        if (currentBlankIndices.indexOf(i) !== -1) {
+          sentenceHTML += "<input type='text' class='blank-input' data-word-index='" + i + "'>";
+        } else {
+          sentenceHTML += currentSentenceWords[i];
+        }
+        if (i < numWords - 1) {
+          sentenceHTML += " ";
+        }
+      }
+      
+      container.innerHTML = sentenceHTML;
+      
+      // 해석 표시
+      document.getElementById("translation-container").innerHTML =
+        "<strong>해석:</strong> " + sentenceObj.translation;
+      
+      // Check 버튼 활성화, Next 버튼은 숨김
+      document.getElementById("check-button").disabled = false;
+      document.getElementById("next-button").classList.add("hidden");
+    }
+    
+    // 사용자가 입력한 답안을 체크하는 함수
+    function checkAnswer() {
+      var inputs = document.querySelectorAll(".blank-input");
+      var correctCount = 0;
+      
+      inputs.forEach(function(input) {
+        var wordIndex = input.getAttribute("data-word-index");
+        // 알파벳/숫자를 제외한 구두점 제거, 소문자로 비교
+        var correctWord = currentSentenceWords[wordIndex].replace(/[^a-zA-Z0-9]/g, "");
+        var userAnswer = input.value.trim();
+        
+        if (userAnswer.toLowerCase() === correctWord.toLowerCase()) {
+          input.classList.add("correct");
+          correctCount++;
+        } else {
+          input.classList.add("incorrect");
+          // 오답 시 정답 보여주기
+          input.value = currentSentenceWords[wordIndex];
+        }
+        input.disabled = true;
+      });
+      
+      // 점수 갱신
+      totalScore += correctCount;
+      // Check 버튼 비활성화, Next 버튼 표시
+      document.getElementById("check-button").disabled = true;
+      document.getElementById("next-button").classList.remove("hidden");
+    }
+    
+    // 다음 문장으로 이동
+    function nextSentence() {
+      currentSentenceIndex++;
+      if (currentSentenceIndex < sentences.length) {
+        showSentence();
+      } else {
+        showResult();
+      }
+    }
+    
+    // 최종 점수 화면 표시
+    function showResult() {
+      document.getElementById("game-screen").classList.add("hidden");
+      document.getElementById("result-screen").classList.remove("hidden");
+      document.getElementById("score-display").innerText =
+        "Your score: " + totalScore + " / " + totalBlanks;
+    }
+  </script>
+</body>
+</html>
